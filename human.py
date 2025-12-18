@@ -1,9 +1,19 @@
 # import libraries
 import numpy as np
 import cv2
-
+import serial
+import time
+import serial.tools.list_ports
+ports = list(serial.tools.list_ports.comports())
+print (ports)
+def find_arduino():
+    arduino_ports = []
+    for port in ports:
+        if 'Arduino' in port.description or port.vid == 0x2341 or 'CH340' in port.description or port.vid == 0x1a86:
+            return port.device
+        
 # download the model as plain text as a PROTOTXT file and the trained model as a CAFFEMODEL file from  here: https://github.com/djmv/MobilNet_SSD_opencv
-
+ser = serial.Serial(find_arduino(), 115200, timeout = 0.5)
 # path to the prototxt file with text description of the network architecture
 prototxt = "MobileNetSSD_deploy.prototxt"
 # path to the .caffemodel file with learned network
@@ -22,26 +32,29 @@ classNames = { 0: 'background',
 # capture the webcam feed
 cap = cv2.VideoCapture()
 cap.open(0, cv2.CAP_DSHOW)
+time.sleep(2)
+
+was_human = False
 while True:
     ret, frame = cap.read()
-    
+    is_human = False
     # size of image
     width = frame.shape[1] 
     height = frame.shape[0]
-    # construct a blob from the image
-    blob = cv2.dnn.blobFromImage(frame, scalefactor = 1/127.5, size = (300, 300), mean = (127.5, 127.5, 127.5), swapRB=True, crop=False)
+    # construct a blob from the image scf = 127.5, sz = 300*300 mn = 127.5 3 times
+    blob = cv2.dnn.blobFromImage(frame, scalefactor = 1/127.5, size = (600, 600), mean = (127.5, 127.5, 127.5), swapRB=True, crop=False)
     # blob object is passed as input to the object
     net.setInput(blob)
     # network prediction
     detections = net.forward()
     # detections array is in the format 1,1,N,7, where N is the #detected bounding boxes
     # for each detection, the description (7) contains : [image_id, label, conf, x_min, y_min, x_max, y_max]
-    is_human = False
+
     for i in range(detections.shape[2]):
         # confidence of prediction
         confidence = detections[0, 0, i, 2]
         # set confidence level threshold to filter weak predictions
-        if confidence > 0.5:
+        if confidence > 0.4:
             # get class id
             class_id = int(detections[0, 0, i, 1])
             # scale to the frame
@@ -66,16 +79,27 @@ while True:
                     cv2.putText(frame, label, (x_top_left, y_top_left),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
                     is_human = True
-    if is_human == True:
-        print("on")
-    else:
-        print("off")
-
-
-    cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+                    
+            
+            
+        
+    if is_human != was_human:
+        if is_human == True:
+            print(is_human, was_human, 1)
+            
+            ser.write(b"1")
+            time.sleep(0.6)
+        if is_human == False:
+            print(is_human, was_human, 0)
+            ser.write(b"0")
+            time.sleep(0.6)
+        got = ser.read()
+        print(got)
+    was_human = is_human
+    
+     
     cv2.imshow("frame", frame)
-    if cv2.waitKey(1) >= 0:  # Break with ESC 
-        break
+    cv2.waitKey(1)
 
 cap.release()
 cv2.destroyAllWindows()
