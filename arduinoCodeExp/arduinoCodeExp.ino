@@ -1,5 +1,7 @@
 bool i;
 bool on;
+bool pir;
+
 unsigned long m1;
 unsigned long m2;
 unsigned long m0;
@@ -32,12 +34,15 @@ void loop() {
     on = 1;
     Serial.println("on");
     digitalWrite(2, 1);
-    }
-    if (digitalRead(3) == 1 and on==0) {
-      on = 1;
-      Serial.println("pir");
-      digitalWrite(2, 1);
-
-    
+  }
+  if (digitalRead(3) == 1 and pir == 0) {
+    pir = 1;
+    Serial.println("pir");
+    digitalWrite(2, 1);
+  }
+    if (digitalRead(3) == 0 and pir == 1 and on !=1 ) {
+    pir = 0;
+    Serial.println("!pir");
+    digitalWrite(2, 0);
   }
 }
