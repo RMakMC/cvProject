@@ -45,4 +45,5 @@ void loop() {
     Serial.println("!pir");
     digitalWrite(2, 0);
   }
+Serial.println(digitalRead(3));
 }
